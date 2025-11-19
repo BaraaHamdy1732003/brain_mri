@@ -1,0 +1,38 @@
+name: brain_mri_app
+description: A Flutter app for brain MRI classification using a TFLite model and Supabase authentication.
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.5.6
+  image_picker: ^1.1.1
+  tflite_flutter: ^0.12.1
+  path_provider: ^2.1.4
+  google_fonts: ^6.2.1
+  provider: ^6.1.2
+  uuid: ^4.5.2
+  flutter_dotenv: ^5.1.0
+  cached_network_image: ^3.3.1
+  image: ^4.2.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
+    - assets/model/brain_mri_4class_balanced_model.tflite
+    - assets/model/labels.txt
+    - assets/images/logo.png
