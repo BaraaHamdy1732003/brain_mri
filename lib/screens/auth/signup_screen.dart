@@ -16,6 +16,8 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _fullName = TextEditingController();   // 👈 NEW FIELD
+
   bool _loading = false;
   String? _error;
 
@@ -28,23 +30,22 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       final email = _email.text.trim();
       final password = _password.text;
+      final fullName = _fullName.text.trim();
 
-      if (email.isEmpty || password.isEmpty) {
+      if (email.isEmpty || password.isEmpty || fullName.isEmpty) {
         setState(() => _error = 'Please fill all fields.');
         return;
       }
 
-      // Access SupabaseService through Provider
       final supa = Provider.of<SupabaseService>(context, listen: false);
 
-      final res = await supa.signUp(email, password);
+      final res = await supa.signUp(email, password, fullName);
 
-      if (res.user == null || res.user!.id.isEmpty) {
-        setState(() => _error = 'Sign up failed. Try another email.');
+      if (res.user == null) {
+        setState(() => _error = 'Sign up failed.');
         return;
       }
 
-      // Save Supabase user ID locally
       await LocalStorage.saveUserId(res.user!.id);
 
       if (!mounted) return;
@@ -57,13 +58,6 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Sign up')),
@@ -71,8 +65,12 @@ class _SignupScreenState extends State<SignupScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            InputField(controller: _fullName, label: 'Full Name'),   // 👈 NEW
+            const SizedBox(height: 12),
+
             InputField(controller: _email, label: 'Email'),
             const SizedBox(height: 12),
+
             InputField(controller: _password, label: 'Password', obscure: true),
             const SizedBox(height: 16),
 
@@ -83,10 +81,7 @@ class _SignupScreenState extends State<SignupScreen> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
           ],
         ),

@@ -1,3 +1,4 @@
+// lib/screens/home/home_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,7 +10,8 @@ import '../../routes.dart';
 // Services
 import '../../services/tflite_service.dart';
 import '../../services/local_storage.dart';
-import '../../services/supabase_service.dart'; // Add this import
+import '../../services/supabase_service.dart';
+import '../../services/last_prediction_store.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,8 +23,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   File? _image;
   bool _busy = false;
+  int _selectedIndex = 1; // Home is selected by default
+
   final ImagePicker _picker = ImagePicker();
-  final SupabaseService _supabaseService = SupabaseService(); // Add this
+  final SupabaseService _supabaseService = SupabaseService();
 
   Future<void> _pick(ImageSource src) async {
     final picked = await _picker.pickImage(source: src, imageQuality: 85);
@@ -38,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final tflite = Provider.of<TFLiteService>(context, listen: false);
 
     try {
-      // Run model prediction
       final result = await tflite.runModelOnImage(_image!);
 
       if (result == null) {
@@ -49,21 +52,23 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Upload image to Supabase Storage and get URL
+      // Save the last prediction in memory so the chat can use it
+      LastPredictionStore.set(result);
+
+      // Upload image
       String? imageUrl;
       try {
         imageUrl = await _supabaseService.uploadImage(_image!);
         debugPrint('📸 Image uploaded successfully: $imageUrl');
       } catch (e) {
         debugPrint('⚠️ Image upload failed: $e');
-        // Continue even if upload fails, just without saving to history
       }
 
       if (!mounted) return;
       Navigator.pushNamed(context, Routes.result, arguments: {
         'imageFile': _image,
         'result': result,
-        'imageUrl': imageUrl ?? '', // Pass the uploaded image URL
+        'imageUrl': imageUrl ?? '',
       });
     } catch (e) {
       if (!mounted) return;
@@ -76,9 +81,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logout() async {
-    await LocalStorage.clearUserId();
+    await LocalStorage.clear();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, Routes.login);
+  }
+
+  void _onNavTap(int index) {
+    setState(() => _selectedIndex = index);
+
+    if (index == 0) {
+      // HOME (left)
+      Navigator.pushReplacementNamed(context, Routes.home);
+    } else if (index == 1) {
+      // PROFILE (right)
+      Navigator.pushNamed(context, Routes.profile);
+    }
   }
 
   @override
@@ -97,6 +114,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+
+      // -----------------------------
+      // BODY
+      // -----------------------------
       body: Center(
         child: _busy
             ? const Column(
@@ -134,6 +155,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
       ),
+
+      // -----------------------------
+      // BOTTOM NAVIGATION
+      // -----------------------------
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavTap,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home), // HOME ICON LEFT
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person), // PROFILE ICON RIGHT
+            label: 'Profile',
+          ),
+        ],
+      ),
+
+      // -----------------------------
+      // Floating chat button -> opens ChatScreen
+      // -----------------------------
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.pushNamed(context, Routes.chat),
+        icon: const Icon(Icons.chat),
+        label: const Text('Ask AI'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }

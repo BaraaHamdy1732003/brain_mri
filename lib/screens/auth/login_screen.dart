@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/input_field.dart';
 import '../../widgets/custom_button.dart';
 import '../../routes.dart';
-import '../../services/local_storage.dart';
-import '../../services/supabase_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,22 +32,27 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Access Supabase service
-      final supa = Provider.of<SupabaseService>(context, listen: false);
-      final res = await supa.signIn(email, password);
+      final supabase = Supabase.instance.client;
 
-      if (res.user == null || res.user!.id.isEmpty) {
-        setState(() => _error = 'Invalid credentials.');
+      // Supabase sign-in
+      final response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.session == null) {
+        setState(() => _error = 'Invalid email or password.');
         return;
       }
 
-      // Save user ID locally
-      await LocalStorage.saveUserId(res.user!.id);
-
+      // SUCCESS → Go to home screen
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, Routes.home);
+
+    } on AuthException catch (e) {
+      setState(() => _error = e.message);
     } catch (e) {
-      setState(() => _error = 'Sign in error: $e');
+      setState(() => _error = 'Sign-in error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -74,16 +77,19 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 12),
             InputField(controller: _password, label: 'Password', obscure: true),
             const SizedBox(height: 16),
-            
-            if (_loading)
-              const CircularProgressIndicator()
-            else ...[
-              CustomButton(label: 'Sign In', onPressed: _signIn),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, Routes.signup),
-                child: const Text('Create account'),
-              ),
-            ],
+
+            _loading
+                ? const CircularProgressIndicator()
+                : Column(
+                    children: [
+                      CustomButton(label: 'Sign In', onPressed: _signIn),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, Routes.signup),
+                        child: const Text('Create account'),
+                      ),
+                    ],
+                  ),
 
             if (_error != null)
               Padding(
