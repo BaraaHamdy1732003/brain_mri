@@ -1,7 +1,7 @@
 // lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/tflite_service.dart';
+//import 'services/tflite_service.dart';
 import 'routes.dart';
 import 'utils/theme.dart';
 import 'services/supabase_service.dart';

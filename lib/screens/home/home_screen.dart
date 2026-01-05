@@ -1,20 +1,15 @@
-// lib/screens/home/home_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 
-import '../../widgets/custom_button.dart';
 import '../../routes.dart';
-
-// Services
-import '../../services/tflite_service.dart';
-import '../../services/local_storage.dart';
+import '../../services/mri_api_service.dart';
 import '../../services/supabase_service.dart';
-import '../../services/last_prediction_store.dart';
+import '../../services/local_storage.dart';
+import '../../widgets/custom_button.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -23,39 +18,58 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   File? _image;
   bool _busy = false;
-  int _selectedIndex = 1; // Home is selected by default
+  int _selectedIndex = 0;
 
   final ImagePicker _picker = ImagePicker();
   final SupabaseService _supabaseService = SupabaseService();
 
-  Future<void> _pick(ImageSource src) async {
-    final picked = await _picker.pickImage(source: src, imageQuality: 85);
-    if (picked == null) return;
-    setState(() => _image = File(picked.path));
-    await _analyze();
+  // -----------------------------
+  // PICK IMAGE
+  // -----------------------------
+  Future<void> _pick(ImageSource source) async {
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 95,
+      );
+
+      if (picked == null) return;
+
+      setState(() {
+        _image = File(picked.path);
+      });
+    } catch (e) {
+      _showSnack('Failed to pick image');
+    }
   }
 
-  Future<void> _analyze() async {
-    if (_image == null) return;
+  // -----------------------------
+  // PREDICT (FLASK)
+  // -----------------------------
+  Future<void> _predict() async {
+    if (_image == null) {
+      _showSnack('Please select an MRI image first');
+      return;
+    }
+
     setState(() => _busy = true);
 
-    final tflite = Provider.of<TFLiteService>(context, listen: false);
-
     try {
-      final result = await tflite.runModelOnImage(_image!);
+      // 1️⃣ Flask prediction
+      final result = await MRIApiService.predict(_image!);
 
-      if (result == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Model returned no result.')),
-        );
-        setState(() => _busy = false);
-        return;
-      }
+      final label = result['label'];
+      final confidence = result['confidence'];
+      final probabilities = result['probabilities'];
 
-      // Save the last prediction in memory so the chat can use it
-      LastPredictionStore.set(result);
+      // 2️⃣ Save for chatbot context
+     /* LastPredictionStore.save(
+        label: label,
+        confidence: confidence,
+        probabilities: probabilities,
+      );*/
 
-      // Upload image
+      // 3️⃣ Upload image to Supabase (NON-BLOCKING)
       String? imageUrl;
       try {
         imageUrl = await _supabaseService.uploadImage(_image!);
@@ -65,39 +79,50 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (!mounted) return;
-      Navigator.pushNamed(context, Routes.result, arguments: {
-        'imageFile': _image,
-        'result': result,
-        'imageUrl': imageUrl ?? '',
-      });
+
+      // 4️⃣ Navigate to result screen
+      Navigator.pushNamed(
+        context,
+        Routes.result,
+        arguments: {
+          'imageFile': _image,
+          'result': result,
+          'imageUrl': imageUrl ?? '',
+        },
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      _showSnack('Error: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  // -----------------------------
+  // LOGOUT
+  // -----------------------------
   Future<void> _logout() async {
     await LocalStorage.clear();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, Routes.login);
   }
 
+  // -----------------------------
+  // BOTTOM NAV
+  // -----------------------------
   void _onNavTap(int index) {
     setState(() => _selectedIndex = index);
 
     if (index == 0) {
-      // HOME (left)
       Navigator.pushReplacementNamed(context, Routes.home);
     } else if (index == 1) {
-      // PROFILE (right)
       Navigator.pushNamed(context, Routes.profile);
     }
   }
 
+  // -----------------------------
+  // UI
+  // -----------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,8 +159,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     _image == null
-                        ? Image.asset('assets/images/logo.png', height: 180)
-                        : Image.file(_image!, height: 220),
+                        ? Image.asset(
+                            'assets/images/logo.png',
+                            height: 180,
+                          )
+                        : Image.file(
+                            _image!,
+                            height: 220,
+                          ),
 
                     const SizedBox(height: 16),
 
@@ -147,6 +178,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     CustomButton(
                       label: 'Take a picture',
                       onPressed: () => _pick(ImageSource.camera),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    CustomButton(
+                      label: 'Predict',
+                      onPressed: _predict,
                     ),
 
                     const SizedBox(height: 12),
@@ -164,25 +202,35 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: _onNavTap,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home), // HOME ICON LEFT
+            icon: Icon(Icons.home),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person), // PROFILE ICON RIGHT
+            icon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
       ),
 
       // -----------------------------
-      // Floating chat button -> opens ChatScreen
+      // FLOATING CHAT BUTTON
       // -----------------------------
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, Routes.chat),
         icon: const Icon(Icons.chat),
         label: const Text('Ask AI'),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.centerDocked,
+    );
+  }
+
+  // -----------------------------
+  // HELPERS
+  // -----------------------------
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 }

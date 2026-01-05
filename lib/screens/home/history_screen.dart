@@ -21,35 +21,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _loadHistoryFromSupabase() async {
+    if (!mounted) return;
+
     setState(() {
       _loading = true;
     });
 
     try {
-      _items = await _supabaseService.getHistory();
+      final data = await _supabaseService.getHistory();
+      if (!mounted) return;
+
+      setState(() {
+        _items = data;
+      });
     } catch (e) {
       debugPrint('❌ Error loading history from Supabase: $e');
-      // Optionally fall back to local storage here
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+      });
     }
-
-    setState(() {
-      _loading = false;
-    });
   }
 
   Future<void> _deleteItem(int index) async {
+    if (index >= _items.length) return;
+
     final item = _items[index];
     final String id = item['id']?.toString() ?? '';
 
     try {
       await _supabaseService.deleteHistoryItem(id);
+      if (!mounted) return;
+
       setState(() {
         _items.removeAt(index);
       });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('History item deleted')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete: $e')),
       );
@@ -77,29 +90,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           color: Colors.red,
                           alignment: Alignment.centerRight,
                           padding: const EdgeInsets.only(right: 20),
-                          child: const Icon(Icons.delete, color: Colors.white),
+                          child:
+                              const Icon(Icons.delete, color: Colors.white),
                         ),
                         onDismissed: (_) => _deleteItem(idx),
                         child: ListTile(
-                          leading: r['image_url'] != null && r['image_url'] != ''
+                          leading: r['image_url'] != null &&
+                                  r['image_url'] != ''
                               ? CachedNetworkImage(
                                   imageUrl: r['image_url'],
                                   width: 56,
                                   height: 56,
                                   fit: BoxFit.cover,
-                                  placeholder: (_, __) => 
+                                  placeholder: (_, __) =>
                                       const CircularProgressIndicator(),
                                   errorWidget: (_, __, ___) =>
                                       const Icon(Icons.broken_image),
                                 )
                               : const Icon(Icons.image),
-                          title: Text(r['predicted_label'] ?? 'Unknown'),
+                          title:
+                              Text(r['predicted_label'] ?? 'Unknown'),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (r['confidence'] != null)
                                 Text(
-                                  'Confidence: ${((r['confidence'] as double) * 100).toStringAsFixed(2)}%',
+                                  'Confidence: ${((r['confidence'] as num) * 100).toStringAsFixed(2)}%',
                                 ),
                               Text(
                                 _formatDate(r['created_at']),
@@ -107,7 +123,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               ),
                             ],
                           ),
-                          trailing: const Icon(Icons.chevron_right),
                         ),
                       );
                     },
@@ -119,9 +134,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _formatDate(dynamic date) {
     if (date == null) return '';
     try {
-      final DateTime dateTime = DateTime.parse(date.toString()).toLocal();
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
+      final DateTime dateTime =
+          DateTime.parse(date.toString()).toLocal();
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year} '
+          '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
       return date.toString();
     }
   }

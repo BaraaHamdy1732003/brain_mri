@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,23 +13,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final SupabaseClient client = Supabase.instance.client;
 
   User? user;
+  bool isLoading = true;
+  late final StreamSubscription<AuthState> _authSub;
 
   @override
   void initState() {
     super.initState();
-    user = client.auth.currentUser;
 
-    // Keep profile updated when auth state changes
-    client.auth.onAuthStateChange.listen((event) {
-      setState(() => user = client.auth.currentUser);
+    _loadUser();
+
+    _authSub = client.auth.onAuthStateChange.listen((data) {
+      final session = data.session;
+
+      if (!mounted) return;
+
+      setState(() {
+        user = session?.user;
+        isLoading = false;
+      });
+
+      if (session == null) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     });
+  }
+
+  Future<void> _loadUser() async {
+    final session = client.auth.currentSession;
+
+    setState(() {
+      user = session?.user;
+      isLoading = false;
+    });
+
+    if (session == null && mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSub.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (user == null) {
+    if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text("No user session")),
       );
     }
 
@@ -37,16 +76,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 251, 251, 252),
-
       appBar: AppBar(
         title: const Text("Profile"),
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 251, 251, 252),
         elevation: 0,
-
         automaticallyImplyLeading: false,
-
-        /// ✅ HOME ICON ON LEFT
         leading: IconButton(
           icon: const Icon(Icons.home),
           onPressed: () {
@@ -54,88 +89,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-
-            // Avatar
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.blue[300],
               child: const Icon(Icons.person, size: 60, color: Colors.white),
             ),
-
             const SizedBox(height: 20),
-
-            // Full Name
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                leading: const Icon(Icons.person, color: Colors.blue),
-                title: const Text("Full Name"),
-                subtitle: Text(fullName),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Email
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                leading: const Icon(Icons.email, color: Colors.blue),
-                title: const Text("Email"),
-                subtitle: Text(user!.email ?? "No email"),
-              ),
-            ),
-
+            _infoCard("Full Name", fullName, Icons.person),
+            _infoCard("Email", user!.email ?? "No email", Icons.email),
             const SizedBox(height: 30),
-
-            // Change password
             ElevatedButton.icon(
-              onPressed: () => _changePasswordDialog(),
+              onPressed: _changePasswordDialog,
               icon: const Icon(Icons.lock_reset),
               label: const Text("Change Password"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             ),
-
             const SizedBox(height: 12),
-
-            // Logout
             ElevatedButton.icon(
-              onPressed: () {
-                client.auth.signOut();
-                Navigator.pushReplacementNamed(context, '/login');
-              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: _logout,
               icon: const Icon(Icons.logout),
               label: const Text("Logout"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _infoCard(String title, String value, IconData icon) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.blue),
+        title: Text(title),
+        subtitle: Text(value),
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    try {
+      await client.auth.signOut(scope: SignOutScope.local);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/login');
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logout failed')),
+      );
+    }
   }
 
   Future<void> _changePasswordDialog() async {
@@ -156,11 +163,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () async {
-              if (controller.text.isNotEmpty) {
+              if (controller.text.isEmpty) return;
+              try {
                 await client.auth.updateUser(
                   UserAttributes(password: controller.text),
                 );
-                Navigator.pop(context);
+                if (mounted) Navigator.pop(context);
+              } catch (_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password update failed')),
+                );
               }
             },
             child: const Text("Save"),

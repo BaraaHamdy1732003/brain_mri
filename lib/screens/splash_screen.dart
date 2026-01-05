@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../routes.dart';
 import '../services/local_storage.dart';
-import '../services/tflite_service.dart';
-import 'package:provider/provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,15 +12,13 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   Future<void> _init() async {
-    // Load TFLite if not loaded (we kept it in provider but ensure loaded)
-    final tf = Provider.of<TFLiteService>(context, listen: false);
-    try {
-      await tf.loadModelAndLabels();
-    } catch (_) {}
-
+    // Small splash delay for UX
     await Future.delayed(const Duration(milliseconds: 800));
 
     final userId = await LocalStorage.getUserId();
+
+    if (!mounted) return;
+
     if (userId != null) {
       Navigator.pushReplacementNamed(context, Routes.home);
     } else {
@@ -38,7 +35,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }

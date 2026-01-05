@@ -13,12 +13,6 @@ class ResultScreen extends StatelessWidget {
     String imageUrl,
   ) async {
     try {
-      debugPrint('🔄 Attempting to save to Supabase...');
-      debugPrint('📊 Prediction: $predictedLabel');
-      debugPrint('🎯 Confidence: $confidence');
-      debugPrint('🖼️ Image URL: $imageUrl');
-      debugPrint('📈 All scores: $allScores');
-
       final supabaseService = SupabaseService();
       await supabaseService.savePredictionToHistory(
         imageUrl: imageUrl,
@@ -26,54 +20,58 @@ class ResultScreen extends StatelessWidget {
         confidence: confidence,
         allScores: allScores,
       );
-      debugPrint('✅ Prediction saved to Supabase history');
+      debugPrint('✅ Prediction saved to Supabase');
     } catch (e) {
-      debugPrint('❌ Failed to save to Supabase history: $e');
-      debugPrint('📋 Error details: ${e.toString()}');
+      debugPrint('❌ Supabase save failed: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ SAFE map conversion
+    final rawArgs = ModalRoute.of(context)!.settings.arguments;
     final Map<String, dynamic> args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+        Map<String, dynamic>.from(rawArgs as Map);
 
     final File imageFile = args['imageFile'] as File;
+
     final Map<String, dynamic> result =
-        (args['result'] ?? {}) as Map<String, dynamic>;
+        Map<String, dynamic>.from(args['result'] ?? {});
+
     final String imageUrl = args['imageUrl']?.toString() ?? '';
 
     final String predictedLabel = result['label']?.toString() ?? 'Unknown';
-    final double confidence = (result['confidence'] as double?) ?? 0.0;
-    final Map<String, dynamic> allScores = 
-        (result['allScores'] ?? {}) as Map<String, dynamic>;
 
-    // Debug the incoming arguments
-    debugPrint('🎬 ResultScreen loaded with:');
-    debugPrint('📁 Image file: ${imageFile.path}');
-    debugPrint('📦 Result: $result');
-    debugPrint('🔗 Image URL from args: $imageUrl');
-    debugPrint('🏷️ Predicted label: $predictedLabel');
+    final double confidence =
+        (result['confidence'] is num)
+            ? (result['confidence'] as num).toDouble()
+            : 0.0;
 
-    // Save to Supabase when screen loads ONLY if we have an image URL
+final Map<String, dynamic> allScores =
+    Map<String, dynamic>.from(result['probabilities'] ?? {});
+
+
+    // Save once when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (imageUrl.isNotEmpty) {
-        _saveToSupabaseHistory(predictedLabel, confidence, allScores, imageUrl);
-      } else {
-        debugPrint('⚠️ Cannot save to Supabase: imageUrl is empty');
-        debugPrint('📋 Available args keys: ${args.keys}');
+        _saveToSupabaseHistory(
+          predictedLabel,
+          confidence,
+          allScores,
+          imageUrl,
+        );
       }
     });
 
-    // Convert allScores to list for display
-    final List<Map<String, dynamic>> probs = allScores.entries.map((entry) {
+    // Prepare scores for UI
+    final probs = allScores.entries.map((e) {
       return {
-        'label': entry.key,
-        'score': (entry.value as double?) ?? 0.0,
+        'label': e.key,
+        'score': (e.value as num).toDouble(),
       };
-    }).toList();
-
-    probs.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+    }).toList()
+      ..sort((a, b) =>
+          (b['score'] as double).compareTo(a['score'] as double));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Result')),
@@ -85,35 +83,37 @@ class ResultScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Predicted: $predictedLabel',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'Confidence: ${(confidence * 100).toStringAsFixed(2)}%',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 12),
             Expanded(
               child: ListView.builder(
                 itemCount: probs.length,
-                itemBuilder: (_, idx) {
-                  final p = probs[idx];
+                itemBuilder: (_, i) {
                   return PredictionTile(
-                    label: p['label']?.toString() ?? '',
-                    score: (p['score'] as double?) ?? 0.0,
+                   label: probs[i]['label'] as String,
+                    score: probs[i]['score'] as double,
                   );
                 },
               ),
             ),
-            if (imageUrl.isNotEmpty)
-              const Text(
-                'Saved to cloud',
-                style: TextStyle(color: Colors.green),
-              )
-            else
-              const Text(
-                'Not saved to cloud (no image URL)',
-                style: TextStyle(color: Colors.orange),
+            Text(
+              imageUrl.isNotEmpty
+                  ? 'Saved to cloud'
+                  : 'Not saved to cloud',
+              style: TextStyle(
+                color: imageUrl.isNotEmpty
+                    ? Colors.green
+                    : Colors.orange,
               ),
+            ),
           ],
         ),
       ),
