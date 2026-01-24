@@ -1,81 +1,85 @@
 import 'package:flutter/material.dart';
-import '../../services/chatbot_service.dart';
-import '../../services/last_prediction_store.dart';
+import 'package:brain_mri_app/services/chatbot_service.dart';
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+class AiChatScreen extends StatefulWidget {
+  const AiChatScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<AiChatScreen> createState() => _AiChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  final List<_ChatMessage> _messages = [];
+class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final ChatbotService _chatbot = ChatbotService();
-  bool _sending = false;
+  final ScrollController _scrollController = ScrollController();
 
-  @override
-  void initState() {
-    super.initState();
+  final List<Map<String, String>> _messages = [];
+  bool _isLoading = false;
 
-    final last = LastPredictionStore.get();
-    if (last != null) {
-      final label = last['label']?.toString() ?? 'Unknown';
-      final confidence = last['confidence'];
-      final confText = confidence != null
-          ? ' (confidence ${(confidence * 100).toStringAsFixed(1)}%)'
-          : '';
-
-      _messages.add(_ChatMessage(
-        who: 'system',
-        text: 'Latest MRI result: $label$confText\n\nAsk anything medical about this finding.',
-      ));
-    } else {
-      _messages.add(_ChatMessage(
-        who: 'system',
-        text: 'No MRI result yet. Upload one from the home page.',
-      ));
-    }
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
-  Future<void> _send() async {
+  Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isLoading) return;
 
     setState(() {
-      _messages.add(_ChatMessage(who: 'user', text: text));
-      _controller.clear();
-      _sending = true;
+      _messages.add({'role': 'user', 'text': text});
+      _isLoading = true;
     });
 
-    final reply =
-        await _chatbot.sendMessage(text, contextInfo: LastPredictionStore.get());
+    _controller.clear();
+    _scrollToBottom();
+
+    final reply = await AiMedicalChatService.sendMessage(text);
 
     setState(() {
-      _messages.add(_ChatMessage(who: 'bot', text: reply));
-      _sending = false;
+      _messages.add({'role': 'ai', 'text': reply});
+      _isLoading = false;
     });
+
+    _scrollToBottom();
   }
 
-  Widget _bubble(_ChatMessage m) {
-    final isUser = m.who == 'user';
-    final bg = isUser ? Colors.blue[600] : Colors.grey[200];
-    final align = isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final txt = isUser ? Colors.white : Colors.black87;
-
+  Widget _chatBubble(String text, bool isUser) {
     return Align(
-      alignment: align,
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
         margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(maxWidth: 300),
         decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
+          color: isUser ? Colors.blue : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
-          m.text,
-          style: TextStyle(color: txt),
+          text,
+          style: TextStyle(
+            color: isUser ? Colors.white : Colors.black87,
+            fontSize: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _loadingBubble() {
+    return const Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ),
     );
@@ -84,35 +88,52 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("AI Medical Consultant")),
+      appBar: AppBar(
+        title: const Text('AI Medical Consultant'),
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
+            child: ListView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (_, i) => _bubble(_messages[i]),
+              children: [
+                if (_messages.isEmpty)
+                  _chatBubble(
+                    'Upload an MRI image first to discuss results.',
+                    false,
+                  ),
+                ..._messages.map(
+                  (m) => _chatBubble(
+                    m['text']!,
+                    m['role'] == 'user',
+                  ),
+                ),
+                if (_isLoading) _loadingBubble(),
+              ],
             ),
           ),
-          if (_sending) const LinearProgressIndicator(),
-          Container(
+          const Divider(height: 1),
+          Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    onSubmitted: (_) => _send(),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(),
                     decoration: const InputDecoration(
-                      hintText: "Ask a medical question...",
+                      hintText: 'Ask about your MRI...',
                       border: OutlineInputBorder(),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _sending ? null : _send,
-                  child: const Icon(Icons.send),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _sendMessage,
                 ),
               ],
             ),
@@ -121,10 +142,4 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-}
-
-class _ChatMessage {
-  final String who;
-  final String text;
-  _ChatMessage({required this.who, required this.text});
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
 import 'routes.dart';
 import 'services/supabase_service.dart';
@@ -19,10 +20,16 @@ Future<void> main() async {
   );
   debugPrint("✅ Supabase initialized");
 
-  /// Optional: init Supabase service singleton if needed
-  SupabaseService();
-
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<SupabaseService>(
+          create: (_) => SupabaseService(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

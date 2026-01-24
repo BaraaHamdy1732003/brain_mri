@@ -29,7 +29,7 @@ class Routes {
       result: (context) => const ResultScreen(),
       history: (context) => const HistoryScreen(),
       profile: (context) => const ProfileScreen(),
-      chat: (context) => const ChatScreen(),
+      chat: (context) => const AiChatScreen(),
     };
   }
 }
