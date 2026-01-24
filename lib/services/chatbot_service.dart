@@ -1,23 +1,47 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'mri_context.dart';
 
 class AiMedicalChatService {
-  /// Android Emulator → localhost
   static const String _endpoint = 'http://10.0.2.2:11434/api/generate';
 
-  static const String _systemPrompt = '''
-You are a medical information assistant for Brain MRI analysis.
+  static String _systemPrompt() {
+    if (!MRIContext.hasResult) {
+      return '''
+You are a medical information assistant for Brain MRI.
 
 RULES:
 - Do NOT say you are a doctor
 - Do NOT introduce yourself
 - Keep answers short (2–4 sentences)
-- Use simple, clear language
-- Only discuss Brain MRI and related conditions
-- Do NOT diagnose or claim certainty
-- Recommend consulting a real doctor when appropriate
-- If no MRI result is provided, explain that it is required
+- Use simple language
+- Only discuss Brain MRI
+- If no MRI result is available, say it clearly
+- Encourage consulting a real doctor
 ''';
+    }
+
+    final probs = MRIContext.probabilities!.entries
+        .map((e) =>
+            '${e.key}: ${((e.value as num) * 100).toStringAsFixed(1)}%',)
+        .join(', ');
+
+    return '''
+You are a medical information assistant for Brain MRI.
+
+MRI RESULT:
+- Predicted finding: ${MRIContext.predictedLabel}
+- Model confidence: ${(MRIContext.confidence! * 100).toStringAsFixed(1)}%
+- Class probabilities: $probs
+
+GUIDELINES:
+- Do NOT diagnose or claim certainty
+- Explain what the result may suggest
+- Be calm and reassuring
+- Keep responses short and clear
+- Encourage medical consultation
+''';
+  }
 
   static Future<String> sendMessage(String userMessage) async {
     try {
@@ -29,7 +53,7 @@ RULES:
           'stream': false,
           'prompt': '''
 SYSTEM:
-$_systemPrompt
+${_systemPrompt()}
 
 USER:
 $userMessage
@@ -44,14 +68,13 @@ ASSISTANT:
       }
 
       final data = jsonDecode(response.body);
-
       return data['response']
               ?.toString()
               .trim()
               .replaceAll(RegExp(r'\n{2,}'), '\n') ??
           'No response received.';
-    } catch (e) {
-      return 'Unable to connect to AI service. Please try again.';
+    } catch (_) {
+      return 'Unable to connect to AI service.';
     }
   }
 }

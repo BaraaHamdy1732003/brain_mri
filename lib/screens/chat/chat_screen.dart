@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:brain_mri_app/services/chatbot_service.dart';
+import '../../services/chatbot_service.dart';
+import '../../services/mri_context.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -10,30 +11,39 @@ class AiChatScreen extends StatefulWidget {
 
 class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scroll = ScrollController();
 
   final List<Map<String, String>> _messages = [];
-  bool _isLoading = false;
+  bool _loading = false;
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+  @override
+  void initState() {
+    super.initState();
+
+    // ✅ Inject MRI summary automatically
+    if (MRIContext.hasResult) {
+      _messages.add({
+        'role': 'ai',
+        'text':
+            'MRI result: ${MRIContext.predictedLabel} '
+            '(${(MRIContext.confidence! * 100).toStringAsFixed(1)}% confidence).\n'
+            'You can ask me what this may mean.',
+      });
+    } else {
+      _messages.add({
+        'role': 'ai',
+        'text': 'Upload an MRI image first to discuss results.',
+      });
+    }
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _isLoading) return;
+    if (text.isEmpty || _loading) return;
 
     setState(() {
       _messages.add({'role': 'user', 'text': text});
-      _isLoading = true;
+      _loading = true;
     });
 
     _controller.clear();
@@ -43,22 +53,45 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     setState(() {
       _messages.add({'role': 'ai', 'text': reply});
-      _isLoading = false;
+      _loading = false;
     });
 
     _scrollToBottom();
   }
 
-  Widget _chatBubble(String text, bool isUser) {
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Widget _bubble(String text, bool isUser) {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.all(12),
-        constraints: const BoxConstraints(maxWidth: 300),
+        padding: const EdgeInsets.all(14),
+        constraints: const BoxConstraints(maxWidth: 320),
         decoration: BoxDecoration(
-          color: isUser ? Colors.blue : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(16),
+          color: isUser ? Colors.blue : Colors.grey.shade100,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isUser ? 16 : 4),
+            bottomRight: Radius.circular(isUser ? 4 : 16),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+            ),
+          ],
         ),
         child: Text(
           text,
@@ -71,11 +104,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
-  Widget _loadingBubble() {
-    return const Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: EdgeInsets.all(12),
+  Widget _typingIndicator() {
+    return const Padding(
+      padding: EdgeInsets.all(8),
+      child: Align(
+        alignment: Alignment.centerLeft,
         child: SizedBox(
           width: 24,
           height: 24,
@@ -96,21 +129,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: [
           Expanded(
             child: ListView(
-              controller: _scrollController,
+              controller: _scroll,
               padding: const EdgeInsets.all(12),
               children: [
-                if (_messages.isEmpty)
-                  _chatBubble(
-                    'Upload an MRI image first to discuss results.',
-                    false,
-                  ),
                 ..._messages.map(
-                  (m) => _chatBubble(
-                    m['text']!,
-                    m['role'] == 'user',
-                  ),
+                  (m) => _bubble(m['text']!, m['role'] == 'user'),
                 ),
-                if (_isLoading) _loadingBubble(),
+                if (_loading) _typingIndicator(),
               ],
             ),
           ),
@@ -122,10 +147,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
+                    onSubmitted: (_) => _send(),
                     decoration: const InputDecoration(
-                      hintText: 'Ask about your MRI...',
+                      hintText: 'Ask about your MRI result...',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -133,7 +157,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
+                  onPressed: _send,
                 ),
               ],
             ),

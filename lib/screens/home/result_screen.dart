@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../services/mri_context.dart';
 import '../../widgets/prediction_tile.dart';
 
 class ResultScreen extends StatelessWidget {
@@ -20,38 +21,32 @@ class ResultScreen extends StatelessWidget {
         confidence: confidence,
         allScores: allScores,
       );
-      debugPrint('✅ Prediction saved to Supabase');
-    } catch (e) {
-      debugPrint('❌ Supabase save failed: $e');
-    }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ SAFE map conversion
     final rawArgs = ModalRoute.of(context)!.settings.arguments;
     final Map<String, dynamic> args =
         Map<String, dynamic>.from(rawArgs as Map);
 
-    final File imageFile = args['imageFile'] as File;
-
+    final File imageFile = args['imageFile'];
     final Map<String, dynamic> result =
         Map<String, dynamic>.from(args['result'] ?? {});
 
-    final String imageUrl = args['imageUrl']?.toString() ?? '';
-
-    final String predictedLabel = result['label']?.toString() ?? 'Unknown';
-
+    final String imageUrl = args['imageUrl'] ?? '';
+    final String predictedLabel = result['label'] ?? 'Unknown';
     final double confidence =
-        (result['confidence'] is num)
-            ? (result['confidence'] as num).toDouble()
-            : 0.0;
+        (result['confidence'] as num?)?.toDouble() ?? 0.0;
 
-final Map<String, dynamic> allScores =
-    Map<String, dynamic>.from(result['probabilities'] ?? {});
+    final Map<String, dynamic> allScores =
+        Map<String, dynamic>.from(result['probabilities'] ?? {});
 
+    // ✅ Make MRI result available to chat
+    MRIContext.predictedLabel = predictedLabel;
+    MRIContext.confidence = confidence;
+    MRIContext.probabilities = allScores;
 
-    // Save once when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (imageUrl.isNotEmpty) {
         _saveToSupabaseHistory(
@@ -63,15 +58,16 @@ final Map<String, dynamic> allScores =
       }
     });
 
-    // Prepare scores for UI
-    final probs = allScores.entries.map((e) {
-      return {
-        'label': e.key,
-        'score': (e.value as num).toDouble(),
-      };
-    }).toList()
-      ..sort((a, b) =>
-          (b['score'] as double).compareTo(a['score'] as double));
+    final probs = allScores.entries
+        .map((e) => {
+              'label': e.key,
+              'score': (e.value as num).toDouble(),
+            })
+        .toList()
+      ..sort(
+        (a, b) =>
+            (b['score'] as double).compareTo(a['score'] as double),
+      );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Result')),
@@ -98,20 +94,10 @@ final Map<String, dynamic> allScores =
                 itemCount: probs.length,
                 itemBuilder: (_, i) {
                   return PredictionTile(
-                   label: probs[i]['label'] as String,
+                    label: probs[i]['label'] as String,
                     score: probs[i]['score'] as double,
                   );
                 },
-              ),
-            ),
-            Text(
-              imageUrl.isNotEmpty
-                  ? 'Saved to cloud'
-                  : 'Not saved to cloud',
-              style: TextStyle(
-                color: imageUrl.isNotEmpty
-                    ? Colors.green
-                    : Colors.orange,
               ),
             ),
           ],
