@@ -1,9 +1,10 @@
 import tensorflow as tf
 
 # === Path to your model ===
-h5_model_path = "assets/model/brain_mri_4class_balanced_model.h5"           # Your input .h5 model file
-tflite_model_path = "assets/model/brain_mri_4class_balanced_model.tflite"   # Output .tflite model file
-
+# h5_model_path = "assets/model/brain_mri_4class_balanced_model.h5"           # Your input .h5 model file
+# tflite_model_path = "assets/model/brain_mri_4class_balanced_model.tflite"   # Output .tflite model file
+h5_model_path = "assets/model/best_densenet_model.h5"           # Your input .h5 model file
+tflite_model_path = "assets/model/best_densenet_model.tflite"   # Output .tflite model file
 # === Load the .h5 model ===
 model = tf.keras.models.load_model(h5_model_path)
 print("✅ Keras model loaded successfully.")

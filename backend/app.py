@@ -21,7 +21,7 @@ MODEL_PATH = os.path.join(
     "..",
     "assets",
     "model",
-    "brain_mri_4class_balanced_model.tflite"
+    "best_densenet_model.tflite"
 )
 
 LABELS = [

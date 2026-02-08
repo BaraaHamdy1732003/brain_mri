@@ -110,15 +110,23 @@ class _HomeScreenState extends State<HomeScreen> {
   // -----------------------------
   // BOTTOM NAV
   // -----------------------------
-  void _onNavTap(int index) {
-    setState(() => _selectedIndex = index);
+void _onNavTap(int index) {
+  setState(() => _selectedIndex = index);
 
-    if (index == 0) {
+  switch (index) {
+    case 0:
       Navigator.pushReplacementNamed(context, Routes.home);
-    } else if (index == 1) {
+      break;
+
+    case 1:
+      Navigator.pushNamed(context, Routes.chat);
+      break;
+
+    case 2:
       Navigator.pushNamed(context, Routes.profile);
-    }
+      break;
   }
+}
 
   // -----------------------------
   // UI
@@ -139,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+
 
       // -----------------------------
       // BODY
@@ -206,22 +215,15 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.chat),
+            label: 'AI',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
-          ),
+          ),           
         ],
       ),
-
-      // -----------------------------
-      // FLOATING CHAT BUTTON
-      // -----------------------------
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, Routes.chat),
-        icon: const Icon(Icons.chat),
-        label: const Text('Ask AI'),
-      ),
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerDocked,
     );
   }
 

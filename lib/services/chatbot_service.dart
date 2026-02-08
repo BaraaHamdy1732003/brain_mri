@@ -49,7 +49,7 @@ GUIDELINES:
         Uri.parse(_endpoint),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'model': 'glm-4.6:cloud',
+          'model': 'qwen2.5:7b-instruct',
           'stream': false,
           'prompt': '''
 SYSTEM:
