@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../l10n/language_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -59,6 +63,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+
     if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -66,18 +72,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text("No user session")),
+      return Scaffold(
+        body: Center(child: Text(loc.text('no_user_session'))),
       );
     }
 
     final metadata = user!.userMetadata ?? {};
-    final fullName = metadata['full_name'] ?? "No name set";
+    final fullName = metadata['full_name'] ?? loc.text('no_name_set');
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 251, 251, 252),
       appBar: AppBar(
-        title: const Text("Profile"),
+        title: Text(loc.text('profile')),
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 251, 251, 252),
         elevation: 0,
@@ -88,6 +94,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Navigator.pushReplacementNamed(context, '/home');
           },
         ),
+        actions: [
+          // 🌍 Language Switch Button
+         IconButton(
+            icon: const Icon(Icons.language),
+            onPressed: () {
+              final provider =
+                  Provider.of<LanguageProvider>(context, listen: false);
+
+              if (provider.locale.languageCode == 'en') {
+                provider.changeLanguage('ar');
+              } else {
+                provider.changeLanguage('en');
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -100,31 +122,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Icon(Icons.person, size: 60, color: Colors.white),
             ),
             const SizedBox(height: 20),
-            _infoCard("Full Name", fullName, Icons.person),
-            _infoCard("Email", user!.email ?? "No email", Icons.email),
+            _infoCard(loc.text('full_name'), fullName, Icons.person),
+            _infoCard(
+              loc.text('email'),
+              user!.email ?? loc.text('no_email'),
+              Icons.email,
+            ),
             const SizedBox(height: 30),
             ElevatedButton.icon(
               onPressed: _changePasswordDialog,
               icon: const Icon(Icons.lock_reset),
-              label: const Text("Change Password"),
+              label: Text(loc.text('change_password')),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: _logout,
               icon: const Icon(Icons.logout),
-              label: const Text("Logout"),
+              label: Text(loc.text('logout')),
             ),
           ],
         ),
       ),
     );
   }
-
   Widget _infoCard(String title, String value, IconData icon) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: ListTile(
         leading: Icon(icon, color: Colors.blue),
         title: Text(title),
@@ -134,36 +162,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
+    final loc = AppLocalizations.of(context);
+
     try {
       await client.auth.signOut(scope: SignOutScope.local);
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logout failed')),
+        SnackBar(content: Text(loc.text('logout_failed'))),
       );
     }
   }
 
   Future<void> _changePasswordDialog() async {
+    final loc = AppLocalizations.of(context);
     final controller = TextEditingController();
 
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Change Password"),
+        title: Text(loc.text('change_password')),
         content: TextField(
           controller: controller,
           obscureText: true,
-          decoration: const InputDecoration(
-            labelText: "New Password",
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: loc.text('new_password'),
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () async {
               if (controller.text.isEmpty) return;
+
               try {
                 await client.auth.updateUser(
                   UserAttributes(password: controller.text),
@@ -171,11 +203,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (mounted) Navigator.pop(context);
               } catch (_) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password update failed')),
+                  SnackBar(
+                      content: Text(loc.text('password_update_failed'))),
                 );
               }
             },
-            child: const Text("Save"),
+            child: Text(loc.text('save')),
           ),
         ],
       ),

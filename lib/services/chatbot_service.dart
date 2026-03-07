@@ -8,16 +8,17 @@ class AiMedicalChatService {
   static String _systemPrompt() {
     if (!MRIContext.hasResult) {
       return '''
-You are a medical information assistant for Brain MRI.
+You are a helpful medical information assistant for Brain MRI analysis.
 
-RULES:
-- Do NOT say you are a doctor
-- Do NOT introduce yourself
-- Keep answers short (2–4 sentences)
-- Use simple language
-- Only discuss Brain MRI
-- If no MRI result is available, say it clearly
-- Encourage consulting a real doctor
+IMPORTANT RULES:
+- Never claim to be a doctor or provide medical diagnoses
+- Do not introduce yourself or use phrases like "I am an AI assistant"
+- Keep all responses brief: 2-4 sentences maximum
+- Use simple, clear language that anyone can understand
+- Only discuss topics related to Brain MRI and brain health
+- If no MRI result is available, clearly state that an MRI needs to be uploaded first
+- Always encourage users to consult with a real doctor for medical advice
+- Be supportive and informative without being alarmist
 ''';
     }
 
@@ -27,19 +28,22 @@ RULES:
         .join(', ');
 
     return '''
-You are a medical information assistant for Brain MRI.
+You are a helpful medical information assistant for Brain MRI analysis.
 
-MRI RESULT:
-- Predicted finding: ${MRIContext.predictedLabel}
+CURRENT MRI RESULTS:
+- Primary finding: ${MRIContext.predictedLabel}
 - Model confidence: ${(MRIContext.confidence! * 100).toStringAsFixed(1)}%
-- Class probabilities: $probs
+- Full probability breakdown: $probs
 
-GUIDELINES:
-- Do NOT diagnose or claim certainty
-- Explain what the result may suggest
-- Be calm and reassuring
-- Keep responses short and clear
-- Encourage medical consultation
+GUIDELINES FOR RESPONSE:
+- Explain what this type of finding might mean in general terms
+- Do NOT provide a definitive diagnosis
+- Maintain a calm, reassuring tone
+- Keep responses brief (2-4 sentences)
+- Explain medical terms in simple language
+- Suggest questions the user might want to ask their doctor
+- Always recommend consulting with a healthcare professional
+- Do not repeat the full probability breakdown unless asked
 ''';
   }
 
@@ -49,32 +53,49 @@ GUIDELINES:
         Uri.parse(_endpoint),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'model': 'qwen2.5:7b-instruct',
+          'model': 'glm-4.6:cloud',
           'stream': false,
           'prompt': '''
-SYSTEM:
 ${_systemPrompt()}
 
-USER:
+USER QUESTION:
 $userMessage
 
-ASSISTANT:
+Please provide a brief, helpful response following all guidelines above:
 ''',
         }),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Connection timeout');
+        },
       );
 
       if (response.statusCode != 200) {
-        return 'AI service is unavailable right now.';
+        print('AI service error: ${response.statusCode} - ${response.body}');
+        return 'I apologize, but the AI service is temporarily unavailable. Please try again in a moment.';
       }
 
       final data = jsonDecode(response.body);
-      return data['response']
-              ?.toString()
-              .trim()
-              .replaceAll(RegExp(r'\n{2,}'), '\n') ??
-          'No response received.';
-    } catch (_) {
-      return 'Unable to connect to AI service.';
+      final reply = data['response']?.toString().trim();
+      
+      if (reply == null || reply.isEmpty) {
+        return 'I received an empty response. Please try asking again.';
+      }
+      
+      // Clean up multiple newlines
+      return reply.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+      
+    } catch (e) {
+      print('AI Chat Service Error: $e');
+      
+      if (e.toString().contains('Connection refused')) {
+        return 'Unable to connect to the AI service. Please make sure Ollama is running on your computer.';
+      } else if (e.toString().contains('Connection timeout')) {
+        return 'The connection timed out. Please check your internet connection and try again.';
+      } else {
+        return 'I encountered a technical issue. Please try again later.';
+      }
     }
   }
 }

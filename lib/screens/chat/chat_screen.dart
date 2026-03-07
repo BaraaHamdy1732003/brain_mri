@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/chatbot_service.dart';
 import '../../services/mri_context.dart';
+import '../../l10n/app_localizations.dart';
+import '../../routes.dart';
+import '../../widgets/language_switcher.dart'; // Import the language switcher
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -20,21 +23,35 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
 
-    // ✅ Inject MRI summary automatically
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeChat();
+    });
+  }
+
+  void _initializeChat() {
+    final t = AppLocalizations.of(context)!;
+
     if (MRIContext.hasResult) {
       _messages.add({
         'role': 'ai',
         'text':
-            'MRI result: ${MRIContext.predictedLabel} '
-            '(${(MRIContext.confidence! * 100).toStringAsFixed(1)}% confidence).\n'
-            'You can ask me what this may mean.',
+            '${t.text('mri_result')}: ${MRIContext.predictedLabel} '
+            '(${(MRIContext.confidence! * 100).toStringAsFixed(1)}% ${t.text('confidence')}).\n'
+            '${t.text('ask_meaning')}',
       });
     } else {
       _messages.add({
         'role': 'ai',
-        'text': 'Upload an MRI image first to discuss results.',
+        'text': t.text('upload_mri_first'),
       });
     }
+
+    setState(() {});
+  }
+
+  // Navigate to home screen
+  void _goToHome() {
+    Navigator.pushReplacementNamed(context, Routes.home);
   }
 
   Future<void> _send() async {
@@ -51,12 +68,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     final reply = await AiMedicalChatService.sendMessage(text);
 
-    setState(() {
-      _messages.add({'role': 'ai', 'text': reply});
-      _loading = false;
-    });
-
-    _scrollToBottom();
+    if (mounted) {
+      setState(() {
+        _messages.add({'role': 'ai', 'text': reply});
+        _loading = false;
+      });
+      _scrollToBottom();
+    }
   }
 
   void _scrollToBottom() {
@@ -120,10 +138,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Medical Consultant'),
+        title: Text(t.text('ai_medical_consultant')),
         centerTitle: true,
+        actions: [
+          // Language switcher button
+          const LanguageSwitcher(),
+          
+          // Home button
+          IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: _goToHome,
+            tooltip: t.text('home'),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -148,16 +179,27 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   child: TextField(
                     controller: _controller,
                     onSubmitted: (_) => _send(),
-                    decoration: const InputDecoration(
-                      hintText: 'Ask about your MRI result...',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: t.text('ask_mri_hint'),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _send,
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: _send,
+                    tooltip: t.text('send'),
+                  ),
                 ),
               ],
             ),
@@ -165,5 +207,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scroll.dispose();
+    super.dispose();
   }
 }
