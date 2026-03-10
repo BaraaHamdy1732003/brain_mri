@@ -1,43 +1,127 @@
 # Brain MRI AI Assistant
 
-This project provides a full-stack medical imaging application for automated brain MRI anomaly detection and AI consultation.
-It consists of a Flask backend for MRI processing and AI inference, and a Flutter mobile application for cross-platform user interaction.
+A full-stack **medical imaging application** for automated **brain MRI anomaly detection** and **AI medical consultation**.
 
-The system enables users to upload MRI scans, receive automated predictions, store history securely, and consult an AI medical assistant powered by Ollama.
+The system allows users to upload MRI scans, receive AI predictions, store results securely, and ask an AI assistant for medical explanations.
 
-## Features
-- Automated brain MRI anomaly detection
-- AI-powered medical consultation (Ollama integration)
+The project includes:
+
+- Flask Backend for MRI processing and inference  
+- Flutter Mobile App for cross-platform interaction  
+- Supabase for authentication and storage  
+- Ollama LLM for AI medical consultation  
+
+---
+
+# Features
+
+- Automated Brain MRI anomaly detection
+- AI medical consultation using Ollama
 - Prediction confidence scoring
 - MRI scan history tracking
-- User authentication (Supabase)
-- Multi-language support (English & Arabic & Russian)
-- Cross-platform mobile app (Android & IOS)
+- Secure user authentication via Supabase
+- Multi-language support
+  - English
+  - Arabic
+  - Russian
+- Cross-platform mobile application
+  - Android
+  - iOS
 - Local and cloud storage integration
 
-## Architecture Overview
-- Mobile App (Flutter)
-- Flask Backend API
-- AI Model (MRI Detection)
-- Ollama LLM (Medical Chat Assistant)
-- Supabase (Authentication + Storage)
+---
 
-## Setup
-- - Prerequisites
+# System Architecture
 
-- Python 3.10+
-- Flutter 3.16+
+```
+Flutter Mobile App
+        |
+        v
+     Flask API
+        |
+        v
+ MRI Detection Model
+        |
+        v
+   Prediction Result
+        |
+        +--------------------+
+        |                    |
+        v                    v
+     Supabase           Ollama LLM
+(Authentication +       AI Medical
+   Storage)              Assistant
+```
+
+---
+
+# Tech Stack
+
+## Backend
+
+- Python
+- Flask
+- NumPy
+- OpenCV / PIL
+- Ollama
+- REST API
+
+## AI Stack
+
+### MRI Detection
+
+- TensorFlow / PyTorch model
+- Image preprocessing
+- Confidence scoring
+
+### AI Medical Chat Assistant
+
+- Ollama LLM
+- Context-aware medical explanation
+
+---
+
+# Mobile Application
+
+Built with **Flutter**
+
+Technologies used:
+
+- Flutter
+- Provider (state management)
+- Supabase
+- HTTP package
+- Material UI
+
+### AI Layer
+
+- Local LLM via Ollama  
+- Model used: `glm-4.6:cloud`  
+- Medical prompt engineering
+
+---
+
+# Prerequisites
+
+Before running the project install:
+
+- Python **3.10+**
+- Flutter **3.16+**
 - Android Studio
-- JDK 17
-- Ollama installed
-- Supabase account
+- **JDK 17**
+- **Ollama**
+- **Supabase account**
 
-## Project Structure
-<  brain_mri/
+---
+
+# Project Structure
+
+```
+brain_mri/
 │
 ├── backend/
-│   ├── app.py                    # Flask backend API
-│   ├── requirements.txt          # Python dependencies
+│   ├── app.py
+│   ├── requirements.txt
 │   └── OAS2_0001_MR2_z_slice_102.jpg
 │
 ├── lib/
@@ -68,51 +152,62 @@ The system enables users to upload MRI scans, receive automated predictions, sto
 │   └── l10n/
 │
 └── android/
->
+```
 
-## AI Stack
+---
 
-MRI Detection
-- TensorFlow / PyTorch model
-- Image preprocessing
-- Confidence scoring
+# Backend Setup
 
-AI Chat Assistant
-- Ollama 
-- Context-aware medical explanation
+Navigate to backend folder:
 
-## Backend
+```
+cd backend
+```
 
-- Flask
-- Python
-- NumPy
-- OpenCV / PIL
-- Ollama
-- REST API
+Install dependencies:
 
-## Mobile App
-- Flutter
-- Provider state management
-- Supabase
-- HTTP package
-- Material UI
-- AI Layer
-- Local LLM via Ollama 'glm-4.6:cloud'
-- Medical prompt engineering
- 
-## Accessing the Application
-Backend API:
-< http://127.0.0.1:5000
->
+```
+pip install -r requirements.txt
+```
 
-## Development Workflow
-1. Start Ollama
-2. Start Flask backend
-3. Run Flutter app
-4. Upload MRI
+Run the Flask server:
+
+```
+python app.py
+```
+
+Backend will run at:
+
+```
+http://127.0.0.1:5000
+```
+
+---
+
+# Running the Mobile App
+
+Navigate to project root and run:
+
+```
+flutter pub get
+flutter run
+```
+
+---
+
+# Development Workflow
+
+1. Start **Ollama**
+2. Start **Flask backend**
+3. Run **Flutter app**
+4. Upload MRI scan
 5. View prediction
 6. Ask AI assistant for explanation
 
-## License
-This project is proprietary software developed for academic and research purposes.
+---
+
+# License
+
+This project is **proprietary software** developed for **academic and research purposes**.
+
 All rights reserved.
