@@ -12,6 +12,12 @@ The project includes:
 - Ollama LLM for AI medical consultation  
 
 ---
+# Datasets
+
+The model used in this project was trained and evaluated using the following publicly available datasets:
+
+- [Brain Cancer - MRI Dataset](https://www.kaggle.com/datasets/orvile/brain-cancer-mri-dataset) - Contains MRI images for brain cancer classification.
+- [Brain MRI Images](https://www.kaggle.com/datasets/ashfakyeafi/brain-mri-images) - A collection of brain MRI images for tumor detection.
 
 # Features
 
