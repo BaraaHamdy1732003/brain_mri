@@ -5,15 +5,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image
 
-# =========================
-# APP INIT
-# =========================
 app = Flask(__name__)
 CORS(app)
 
-# =========================
-# MODEL CONFIG
-# =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_PATH = os.path.join(
@@ -33,9 +27,6 @@ LABELS = [
 
 IMG_SIZE = 224
 
-# =========================
-# LOAD MODEL
-# =========================
 try:
     interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
     interpreter.allocate_tensors()
@@ -46,9 +37,6 @@ except Exception as e:
     print("❌ Model loading failed:", e)
     raise e
 
-# =========================
-# PREPROCESSING
-# =========================
 def preprocess_image(image: Image.Image):
     image = image.convert("RGB")
     image = image.resize((IMG_SIZE, IMG_SIZE))
@@ -56,10 +44,6 @@ def preprocess_image(image: Image.Image):
     image = image / 255.0
     image = np.expand_dims(image, axis=0)
     return image
-
-# =========================
-# ROUTES
-# =========================
 @app.route("/", methods=["GET"])
 def health():
     return jsonify({"status": "MRI API running"}), 200
@@ -97,10 +81,6 @@ def predict():
         print("❌ Prediction error:", e)
         return jsonify({"error": str(e)}), 500
 
-
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     print("🚀 Starting MRI Flask API...")
     app.run(

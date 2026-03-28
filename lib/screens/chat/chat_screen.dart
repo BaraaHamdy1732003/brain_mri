@@ -3,7 +3,7 @@ import '../../services/chatbot_service.dart';
 import '../../services/mri_context.dart';
 import '../../l10n/app_localizations.dart';
 import '../../routes.dart';
-import '../../widgets/language_switcher.dart'; // Import the language switcher
+import '../../widgets/language_switcher.dart'; 
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});

@@ -128,36 +128,46 @@ brain_mri/
 ├── backend/
 │   ├── app.py
 │   ├── requirements.txt
-│   └── OAS2_0001_MR2_z_slice_102.jpg
 │
-├── lib/
-│   ├── main.dart
-│   ├── app.dart
-│   ├── routes.dart
-│   │
-│   ├── models/
-│   │   └── user_model.dart
-│   │
-│   ├── services/
-│   │   ├── auth_service.dart
-│   │   ├── chatbot_service.dart
-│   │   ├── mri_api_service.dart
-│   │   ├── supabase_service.dart
-│   │   ├── local_storage.dart
-│   │   ├── mri_context.dart
-│   │   └── last_prediction_store.dart
-│   │
-│   ├── screens/
-│   │   ├── splash_screen.dart
-│   │   ├── auth/
-│   │   ├── home/
-│   │   └── chat/
-│   │
-│   ├── widgets/
-│   ├── utils/
-│   └── l10n/
-│
-└── android/
+lib
+├── app.dart
+├── l10n
+│   ├── app_localizations.dart
+│   └── language_provider.dart
+├── main.dart
+├── routes.dart
+├── screens
+│   ├── analysis
+│   │   └── analysis_screen.dart
+│   ├── auth
+│   │   ├── login_screen.dart
+│   │   └── signup_screen.dart
+│   ├── chat
+│   │   └── chat_screen.dart
+│   ├── home
+│   │   ├── history_screen.dart
+│   │   ├── home_screen.dart
+│   │   ├── profile_screen.dart
+│   │   └── result_screen.dart
+│   └── splash_screen.dart
+├── services
+│   ├── auth_service.dart
+│   ├── chatbot_service.dart
+│   ├── last_prediction_store.dart
+│   ├── local_storage.dart
+│   ├── mri_api_service.dart
+│   ├── mri_context.dart
+│   └── supabase_service.dart
+├── test_connection.dart
+├── utils
+│   └── theme.dart
+└── widgets
+    ├── custom_button.dart
+    ├── input_field.dart
+    ├── language_switcher.dart
+    ├── prediction_tile.dart
+    └── profile_widget.dart
+
 ```
 
 ---
