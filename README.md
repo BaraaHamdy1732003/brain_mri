@@ -125,9 +125,10 @@ Before running the project install:
 ```
 brain_mri/
 │
-├── backend/
-│   ├── app.py
-│   ├── requirements.txt
+backend
+├── app.py
+├── converter.py
+└── requirements.txt
 │
 lib
 ├── app.dart
