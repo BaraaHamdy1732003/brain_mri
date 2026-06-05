@@ -168,7 +168,7 @@ lib
     ├── language_switcher.dart
     ├── prediction_tile.dart
     └── profile_widget.dart
-noteBook
+noteBooks
 ├── cnnmodel.ipynb
 ├── densenet03.ipynb
 ├── mobilenet02.ipynb
