@@ -168,6 +168,12 @@ lib
     ├── language_switcher.dart
     ├── prediction_tile.dart
     └── profile_widget.dart
+noteBook
+├── cnnmodel.ipynb
+├── densenet03.ipynb
+├── mobilenet02.ipynb
+├── neweffechant01 (1).ipynb
+└── reznet04.ipynb
 
 ```
 
