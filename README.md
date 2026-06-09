@@ -1,6 +1,6 @@
 # Brain MRI AI Assistant
 
-A full-stack **medical imaging application** for automated **brain MRI anomaly detection** and **AI medical consultation**.
+A Mobile application **medical imaging application** for automated **brain MRI anomaly detection** and **AI medical consultation**.
 
 The system allows users to upload MRI scans, receive AI predictions, store results securely, and ask an AI assistant for medical explanations.
 
@@ -17,7 +17,7 @@ The project includes:
 The model used in this project was trained and evaluated using the following publicly available datasets:
 
 - [Brain Cancer - MRI Dataset](https://www.kaggle.com/datasets/orvile/brain-cancer-mri-dataset) - Contains MRI images for brain cancer classification.
-- [Brain MRI Images](https://www.kaggle.com/datasets/ashfakyeafi/brain-mri-images) - A collection of brain MRI images for tumor detection.
+- [Brain MRI Images](https://www.kaggle.com/datasets/ashfakyeafi/brain-mri-images) - A collection of brain MRI images for a normal MRI images.
 
 # Features
 
@@ -76,7 +76,7 @@ Flutter Mobile App
 
 ### MRI Detection
 
-- TensorFlow / PyTorch model
+- TensorFlow / keras
 - Image preprocessing
 - Confidence scoring
 
