@@ -1,6 +1,6 @@
 # Brain MRI AI Assistant
 
-A Mobile application **medical imaging application** for automated **brain MRI anomaly detection** and **AI medical consultation**.
+A Mobile **medical imaging application** for automated **brain MRI anomaly detection** and **AI medical consultation**.
 
 The system allows users to upload MRI scans, receive AI predictions, store results securely, and ask an AI assistant for medical explanations.
 
